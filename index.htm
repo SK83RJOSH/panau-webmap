@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<title>Three.js</title>
+	<title>Panau Overview Map</title>
 	<script src="http://threejs.org/build/three.min.js"></script>
 	<script>
 		var dragging, mouseX, mouseY;
@@ -11,16 +11,16 @@
 
 		function init() {
 			scene = new THREE.Scene();
+			scene.fog = new THREE.FogExp2(0xefd1b5, 0.035)
 
-			camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
-			camera.position.z = 15;
+			camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1028);
+			camera.position.z = 10;
 
 			shader = THREE.ShaderLib['normalmap'];
 			geometry = new THREE.PlaneGeometry(16, 16, 256, 256);
 			geometry.computeTangents();
-			texture = THREE.ImageUtils.loadTexture('map_diffuse_low.jpg');
-			texture.minFilter = THREE.LinearFilter;
-			texture.magFilter = THREE.LinearFilter;
+			texture = THREE.ImageUtils.loadTexture('map_diffuse.jpg');
+			texture.minFilter = texture.magFilter = THREE.LinearFilter;
 			displacement = THREE.ImageUtils.loadTexture('map_displacement.jpg');
 
 			uniforms = THREE.UniformsUtils.clone(shader.uniforms);
@@ -28,13 +28,14 @@
 			uniforms["tDiffuse"].value = texture;
 			uniforms["enableDisplacement"].value = true;
 			uniforms["tDisplacement"].value = displacement;
-			uniforms["uDisplacementScale"].value = 1.15;
+			uniforms["uDisplacementScale"].value = 1;
 			
 			material = new THREE.ShaderMaterial({
 				fragmentShader: shader.fragmentShader,
 				vertexShader: shader.vertexShader,
 				uniforms: uniforms,
-				lights: true
+				lights: true,
+				fog: true
 			});
 
 			mesh = new THREE.Mesh(geometry, material);
@@ -42,16 +43,46 @@
 			scene.add(mesh);
 
 			ambientLight = new THREE.AmbientLight(0xffffff);
-			scene.add( ambientLight );
+			scene.add(ambientLight);
 
-			renderer = new THREE.WebGLRenderer();
+			renderer = new THREE.WebGLRenderer({
+				antialias: true
+			});
+			renderer.setClearColor(0x526f99);
 			renderer.setSize(window.innerWidth, window.innerHeight);
-			renderer.antialiasing = true;
 			renderer.physicallyBasedShading = true;
 
 			document.body.appendChild(renderer.domElement);
-			document.body.addEventListener('mousewheel', function(event) {
+
+			renderer.domElement.addEventListener('mousewheel', function(event) {
 				camera.position.z -= event.wheelDeltaY * 0.0174532925;
+			});
+
+			renderer.domElement.addEventListener('mousedown', function(event) {
+				dragging = event.button;
+
+				lastX = event.clientX;
+				lastY = event.clientY;
+			});
+
+			renderer.domElement.addEventListener('mousemove', function(event) {
+				if(dragging === 0) {
+					mesh.rotation.z += (lastX - event.clientX) * 0.0174532925;
+					mesh.rotation.x += (lastY - event.clientY) * 0.0174532925;
+				} else if(dragging === 1) {
+					mesh.position.x -= (lastX - event.clientX) * 0.0174532925;
+					mesh.position.y += (lastY - event.clientY) * 0.0174532925;
+				}
+
+				lastX = event.clientX;
+				lastY = event.clientY;
+			});
+
+			renderer.domElement.addEventListener('mouseup', function(event) {
+				dragging = false;
+
+				lastX = event.clientX;
+				lastY = event.clientY;
 			});
 		}
 
@@ -64,30 +95,6 @@
 			camera.aspect = window.innerWidth / window.innerHeight;
 			camera.updateProjectionMatrix();
 			renderer.setSize(window.innerWidth, window.innerHeight);
-		});
-
-		window.addEventListener('mousedown', function(event) {
-			dragging = true;
-
-			lastX = event.clientX;
-			lastY = event.clientY;
-		});
-
-		window.addEventListener('mousemove', function(event) {
-			if(dragging) {
-				mesh.rotation.z += (lastX - event.clientX) * 0.0174532925;
-				mesh.rotation.x += (lastY - event.clientY) * 0.0174532925;
-			}
-
-			lastX = event.clientX;
-			lastY = event.clientY;
-		});
-
-		window.addEventListener('mouseup', function(event) {
-			dragging = false;
-
-			lastX = event.clientX;
-			lastY = event.clientY;
 		});
 	</script>
 	<style>
