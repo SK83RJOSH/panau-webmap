@@ -18,7 +18,7 @@
 			shader = THREE.ShaderLib['normalmap'];
 			geometry = new THREE.PlaneGeometry(16, 16, 256, 256);
 			geometry.computeTangents();
-			texture = THREE.ImageUtils.loadTexture('map_diffuse.jpg');
+			texture = THREE.ImageUtils.loadTexture('map_diffuse_low.jpg');
 			texture.minFilter = THREE.LinearFilter;
 			texture.magFilter = THREE.LinearFilter;
 			displacement = THREE.ImageUtils.loadTexture('map_displacement.jpg');
