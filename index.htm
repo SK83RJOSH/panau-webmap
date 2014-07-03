@@ -6,56 +6,60 @@
 	<script src="http://threejs.org/build/three.min.js"></script>
 	<script src="MapControls.js"></script>
 	<script>
-		var scene, camera, ambient, shader, renderer, controls;
-		var geometry, texture, displacement, sky, uniforms, material, mesh;
+		var scene, camera, renderer, controls;
+		var map;
 
 		function init() {
 			scene = new THREE.Scene();
-			scene.fog = new THREE.FogExp2(0xefd1b5, 0.035)
 
 			camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1028);
 			camera.position.y = -10;
 			camera.position.z = 10;
-			camera.lookAt(new THREE.Vector3())
+			camera.lookAt(new THREE.Vector3());
 
-			shader = THREE.ShaderLib['normalmap'];
-			geometry = new THREE.PlaneGeometry(16, 16, 256, 256);
-			geometry.computeTangents();
-			texture = THREE.ImageUtils.loadTexture('map_diffuse.jpg');
-			texture.minFilter = texture.magFilter = THREE.LinearFilter;
-			displacement = THREE.ImageUtils.loadTexture('map_displacement.jpg');
-			sky = THREE.ImageUtils.loadTexture('sky_palette.jpg');
-
-			uniforms = THREE.UniformsUtils.clone(shader.uniforms);
+			var uniforms = THREE.UniformsUtils.clone(THREE.ShaderLib['normalmap'].uniforms);
 			uniforms["enableDiffuse"].value = true;
-			uniforms["tDiffuse"].value = texture;
+			uniforms["tDiffuse"].value = THREE.ImageUtils.loadTexture('map_diffuse.jpg');
+			uniforms["tDiffuse"].value.minFilter = THREE.LinearFilter;
+			uniforms["tDiffuse"].value.magFilter = THREE.LinearFilter;
 			uniforms["enableDisplacement"].value = true;
-			uniforms["tDisplacement"].value = displacement;
+			uniforms["tDisplacement"].value = THREE.ImageUtils.loadTexture('map_displacement.png');
 			uniforms["uDisplacementScale"].value = 1;
-			
-			material = new THREE.ShaderMaterial({
-				fragmentShader: shader.fragmentShader,
-				vertexShader: shader.vertexShader,
+
+			map = new THREE.Mesh(new THREE.PlaneGeometry(16, 16, 128, 128), new THREE.ShaderMaterial({
+				fragmentShader: THREE.ShaderLib['normalmap'].fragmentShader,
+				vertexShader: THREE.ShaderLib['normalmap'].vertexShader,
 				uniforms: uniforms,
-				lights: true,
-				fog: true
-			});
+				lights: true
+			}));
+			map.geometry.computeTangents();
+			scene.add(map);
 
-			mesh = new THREE.Mesh(geometry, material);
-			scene.add(mesh);
+			scene.add(new THREE.AmbientLight());
 
-			ambientLight = new THREE.AmbientLight(0x526f99);
-			scene.add(ambientLight);
+			// var waterMesh = new THREE.Mesh(new THREE.PlaneGeometry(64, 64), new THREE.MeshBasicMaterial({
+			// 	color: 0x4a8b8f,
+			// 	transparent: true,
+			// 	opacity: 0.25,
+			// 	fog: true,
+			// 	lights: true
+			// }));
+			// waterMesh.position.z = (200 / 2094.5)
+			// scene.add(waterMesh);
 
 			renderer = new THREE.WebGLRenderer({
 				antialias: true,
 				precision: 'highp'
 			});
-			renderer.setClearColor(0x526f99);
+			renderer.setClearColor(0x052530);
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.physicallyBasedShading = true;
 
 			controls = new THREE.MapControls(camera, renderer.domElement);
+
+			for(var i = 0; i < 1000; i++) {
+				new Player(scene, worldToMap(((Math.random() * 2048) - 1024) * 16, ((Math.random() * 2048) - 1024) * 16, Math.random() * 4096), '', new THREE.Color(Math.random() * 255, Math.random() * 255, Math.random() * 255).getHex());
+			}
 
 			document.body.appendChild(renderer.domElement);
 		}
@@ -71,35 +75,52 @@
 			renderer.setSize(window.innerWidth, window.innerHeight);
 		});
 
-		function componentToHex(c) {
-			var hex = c.toString(16);
-			return hex.length == 1 ? '0' + hex : hex;
+		function worldToMap(x, y, z) {
+			return new THREE.Vector3((x / (2048 * 16)) * 16, (y / (2048 * 16)) * 16, (z / 2094.5));
 		}
 
-		function getImageData(image) {
-			var canvas = document.createElement('canvas');
-			canvas.width = image.width;
-			canvas.height = image.height;
+		function Player(scene, position, name, color) {
+			var _this = this;
+			this.scene = scene;
+			this.name = name;
+			this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+				map: new THREE.ImageUtils.loadTexture('sprite.png'),
+				color: color,
+				fog: true
+			}));
+			this.sprite.scale.set(0.01, 0.01, 0.01);
+			this.sprite.position = position;
+			scene.add(this.sprite);
 
-			var context = canvas.getContext('2d');
-			context.drawImage(image, 0, 0);
+			this.getName = function() {
+				return _this.name;
+			}
 
-			return context.getImageData(0, 0, image.width, image.height);
+			this.setName = function(name) {
+				_this.name = name;
+			}
+
+			this.getPosition = function() {
+				return sprite.position;
+			}
+
+			this.setPosition = function(position) {
+				_this.sprite.position = position;
+			}
+
+			this.getColor = function() {
+				return _this.sprite.material.color;
+			}
+
+			this.setColor = function(color) {
+				_this.sprite.material.color = color;
+			}
+		
+			this.remove = function() {
+				_this.scene.remove(_this.sprite);
+				_this = null;
+			}
 		}
-
-		function getPixel(image, x, y) {
-			var position = (x + image.width * y) * 4;
-			var data = getImageData(image).data;
-
-			return new THREE.Color(data[position] / 255, data[position + 1] / 255, data[position + 2] / 255).getHex();
-		}
-
-		function setTime(time) {
-			renderer.setClearColor(getPixel(sky.image, Math.round((time / 24) * 255), 0));
-			ambientLight.color = renderer.getClearColor();
-		}
-
-		var time = 0;
 	</script>
 	<style>
 		body, html {
