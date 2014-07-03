@@ -57,8 +57,11 @@
 			controls = new THREE.MapControls(camera, renderer.domElement);
 
 			for(var i = 0; i < 1000; i++) {
-				new Player(scene, worldToMap(((Math.random() * 2048) - 1024) * 16, ((Math.random() * 2048) - 1024) * 16, Math.random() * 4096), '', new THREE.Color(Math.random() * 255, Math.random() * 255, Math.random() * 255).getHex());
+				new Player(scene, worldToMap(((Math.random() * 2048) - 1024) * 16, Math.random() * 4096, ((Math.random() * 2048) - 1024) * 16), '', new THREE.Color(Math.random() * 255, Math.random() * 255, Math.random() * 255).getHex());
 			}
+			
+			// new Player(scene, worldToMap(0, 0, 600), '', 0xffffff); //Center test
+			// new Player(scene, worldToMap(19684.2 - 16384, 1301.58, 12563.86 - 16384), '', 0xff0000); //Accuracy test
 
 			document.body.appendChild(renderer.domElement);
 		}
@@ -75,7 +78,7 @@
 		});
 
 		function worldToMap(x, y, z) {
-			return new THREE.Vector3((x / (2048 * 16)) * 16, (y / (2048 * 16)) * 16, (z / 2094.5));
+			return new THREE.Vector3((x / 16384) * 8, (-z / 16384) * 8, (y / 2094.5));
 		}
 
 		function Player(scene, position, name, color) {
