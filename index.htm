@@ -11,6 +11,7 @@
 
 		function init() {
 			scene = new THREE.Scene();
+			scene.fog = new THREE.FogExp2(0xefd1b5, 0.035);
 
 			camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1028);
 			camera.position.y = -10;
@@ -30,6 +31,7 @@
 				fragmentShader: THREE.ShaderLib['normalmap'].fragmentShader,
 				vertexShader: THREE.ShaderLib['normalmap'].vertexShader,
 				uniforms: uniforms,
+				fog: true,
 				lights: true
 			}));
 			map.geometry.computeTangents();
@@ -37,15 +39,12 @@
 
 			scene.add(new THREE.AmbientLight());
 
-			// var waterMesh = new THREE.Mesh(new THREE.PlaneGeometry(64, 64), new THREE.MeshBasicMaterial({
-			// 	color: 0x4a8b8f,
-			// 	transparent: true,
-			// 	opacity: 0.25,
-			// 	fog: true,
-			// 	lights: true
-			// }));
-			// waterMesh.position.z = (200 / 2094.5)
-			// scene.add(waterMesh);
+			var ground = new THREE.Mesh(new THREE.PlaneGeometry(128, 128), new THREE.MeshBasicMaterial({
+				color: 0x052530,
+				fog: true,
+				lights: true
+			}));
+			scene.add(ground);
 
 			renderer = new THREE.WebGLRenderer({
 				antialias: true,
