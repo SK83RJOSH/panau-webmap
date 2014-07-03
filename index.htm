@@ -4,17 +4,19 @@
 	<meta charset="UTF-8">
 	<title>Panau Overview Map</title>
 	<script src="http://threejs.org/build/three.min.js"></script>
+	<script src="MapControls.js"></script>
 	<script>
-		var dragging, mouseX, mouseY;
-		var scene, camera, ambient, shader, renderer;
-		var geometry, texture, displacement, uniforms, material, mesh;
+		var scene, camera, ambient, shader, renderer, controls;
+		var geometry, texture, displacement, sky, uniforms, material, mesh;
 
 		function init() {
 			scene = new THREE.Scene();
 			scene.fog = new THREE.FogExp2(0xefd1b5, 0.035)
 
 			camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1028);
+			camera.position.y = -10;
 			camera.position.z = 10;
+			camera.lookAt(new THREE.Vector3())
 
 			shader = THREE.ShaderLib['normalmap'];
 			geometry = new THREE.PlaneGeometry(16, 16, 256, 256);
@@ -22,6 +24,7 @@
 			texture = THREE.ImageUtils.loadTexture('map_diffuse.jpg');
 			texture.minFilter = texture.magFilter = THREE.LinearFilter;
 			displacement = THREE.ImageUtils.loadTexture('map_displacement.jpg');
+			sky = THREE.ImageUtils.loadTexture('sky_palette.jpg');
 
 			uniforms = THREE.UniformsUtils.clone(shader.uniforms);
 			uniforms["enableDiffuse"].value = true;
@@ -39,51 +42,22 @@
 			});
 
 			mesh = new THREE.Mesh(geometry, material);
-			mesh.rotation.x = -65 * 0.0174532925;
 			scene.add(mesh);
 
-			ambientLight = new THREE.AmbientLight(0xffffff);
+			ambientLight = new THREE.AmbientLight(0x526f99);
 			scene.add(ambientLight);
 
 			renderer = new THREE.WebGLRenderer({
-				antialias: true
+				antialias: true,
+				precision: 'highp'
 			});
 			renderer.setClearColor(0x526f99);
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.physicallyBasedShading = true;
 
+			controls = new THREE.MapControls(camera, renderer.domElement);
+
 			document.body.appendChild(renderer.domElement);
-
-			renderer.domElement.addEventListener('mousewheel', function(event) {
-				camera.position.z -= event.wheelDeltaY * 0.0174532925;
-			});
-
-			renderer.domElement.addEventListener('mousedown', function(event) {
-				dragging = event.button;
-
-				lastX = event.clientX;
-				lastY = event.clientY;
-			});
-
-			renderer.domElement.addEventListener('mousemove', function(event) {
-				if(dragging === 0) {
-					mesh.rotation.z += (lastX - event.clientX) * 0.0174532925;
-					mesh.rotation.x += (lastY - event.clientY) * 0.0174532925;
-				} else if(dragging === 1) {
-					mesh.position.x -= (lastX - event.clientX) * 0.0174532925;
-					mesh.position.y += (lastY - event.clientY) * 0.0174532925;
-				}
-
-				lastX = event.clientX;
-				lastY = event.clientY;
-			});
-
-			renderer.domElement.addEventListener('mouseup', function(event) {
-				dragging = false;
-
-				lastX = event.clientX;
-				lastY = event.clientY;
-			});
 		}
 
 		function animate() {
@@ -96,6 +70,36 @@
 			camera.updateProjectionMatrix();
 			renderer.setSize(window.innerWidth, window.innerHeight);
 		});
+
+		function componentToHex(c) {
+			var hex = c.toString(16);
+			return hex.length == 1 ? '0' + hex : hex;
+		}
+
+		function getImageData(image) {
+			var canvas = document.createElement('canvas');
+			canvas.width = image.width;
+			canvas.height = image.height;
+
+			var context = canvas.getContext('2d');
+			context.drawImage(image, 0, 0);
+
+			return context.getImageData(0, 0, image.width, image.height);
+		}
+
+		function getPixel(image, x, y) {
+			var position = (x + image.width * y) * 4;
+			var data = getImageData(image).data;
+
+			return new THREE.Color(data[position] / 255, data[position + 1] / 255, data[position + 2] / 255).getHex();
+		}
+
+		function setTime(time) {
+			renderer.setClearColor(getPixel(sky.image, Math.round((time / 24) * 255), 0));
+			ambientLight.color = renderer.getClearColor();
+		}
+
+		var time = 0;
 	</script>
 	<style>
 		body, html {
