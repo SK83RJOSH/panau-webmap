@@ -14,8 +14,8 @@
 			scene.fog = new THREE.FogExp2(0xefd1b5, 0.035);
 
 			camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1028);
-			camera.position.y = -10;
-			camera.position.z = 10;
+			camera.position.y = -8;
+			camera.position.z = 9;
 			camera.lookAt(new THREE.Vector3());
 
 			var uniforms = THREE.UniformsUtils.clone(THREE.ShaderLib['normalmap'].uniforms);
