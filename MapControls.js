@@ -17,8 +17,6 @@ THREE.MapControls = function(camera, domElement) {
 		}
 	};
 
-	var rotation = 0;
-
 	this.mousemove = function(event) {
 		event.movementX = event.movementX || event.webkitMovementX || event.mozMovementX;
 		event.movementY = event.movementY || event.webkitMovementY || event.mozMovementY;
@@ -28,10 +26,20 @@ THREE.MapControls = function(camera, domElement) {
 			offset.multiplyScalar(1 / (64 - _this.camera.position.z));
 			offset.applyAxisAngle(new THREE.Vector3(0, 0, 1), _this.camera.rotation.z);
 
-			_this.camera.position = _this.camera.position.sub(offset);
-		} else if(_this.state == STATE.ZOOM) {			
-			if(event.movementY < 0 && _this.camera.position.z > 2 || event.movementY > 0 && _this.camera.position.z < 9) {
-				_this.camera.position = new THREE.Ray(_this.camera.position, new THREE.Vector3(0, 0, 1).applyEuler(_this.camera.rotation).normalize(), 0, 100).at(event.movementY / 5);
+			_this.camera.position = _this.camera.position.sub(offset).clamp(new THREE.Vector3(-12, -12, -12), new THREE.Vector3(12, 12, 12));
+		} else if(_this.state == STATE.ZOOM) {
+			var atPos = 0;
+			var position = _this.camera.position;
+
+			while(Math.abs(atPos) < Math.abs(event.movementY)) {
+				var rayAt = new THREE.Ray(position, new THREE.Vector3(0, 0, 1).applyEuler(_this.camera.rotation).normalize(), 0, 100).at(atPos);
+				
+				if(new THREE.Vector3().copy(rayAt).clamp(new THREE.Vector3(-12, -12, 2), new THREE.Vector3(12, 12, 9)).equals(rayAt)) {
+					_this.camera.position = rayAt;
+					atPos += (event.movementY / Math.abs(event.movementY)) / 5;
+				} else {
+					atPos = Math.abs(event.movementY);
+				}
 			}
 		}
 	};
@@ -43,6 +51,7 @@ THREE.MapControls = function(camera, domElement) {
 	this.domElement.addEventListener('mousedown', this.mousedown);
 	this.domElement.addEventListener('mousemove', this.mousemove);
 	this.domElement.addEventListener('mouseup', this.mouseup);
+	this.domElement.addEventListener('mouseout', this.mouseup);
 	this.domElement.addEventListener('mousewheel', function(event) {
 		_this.state = STATE.ZOOM;
 		_this.mousemove({
