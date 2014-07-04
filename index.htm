@@ -20,7 +20,13 @@
 
 			var uniforms = THREE.UniformsUtils.clone(THREE.ShaderLib['normalmap'].uniforms);
 			uniforms["enableDiffuse"].value = true;
-			uniforms["tDiffuse"].value = THREE.ImageUtils.loadTexture('map_diffuse.jpg');
+			uniforms["tDiffuse"].value = THREE.ImageUtils.loadTexture('map_diffuse_low.png', THREE.UVMapping, function() {
+				THREE.ImageUtils.loadTexture('map_diffuse.jpg', THREE.UVMapping, function(texture) {					
+					map.material.uniforms["tDiffuse"].value = texture;
+					map.material.uniforms["tDiffuse"].value.minFilter = THREE.LinearFilter;
+					map.material.uniforms["tDiffuse"].value.magFilter = THREE.LinearFilter;
+				});
+			});
 			uniforms["tDiffuse"].value.minFilter = THREE.LinearFilter;
 			uniforms["tDiffuse"].value.magFilter = THREE.LinearFilter;
 			uniforms["enableDisplacement"].value = true;
