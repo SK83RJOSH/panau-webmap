@@ -28,17 +28,18 @@ THREE.MapControls = function(camera, domElement) {
 
 			_this.camera.position = _this.camera.position.sub(offset).clamp(new THREE.Vector3(-12, -12, -12), new THREE.Vector3(12, 12, 12));
 		} else if(_this.state == STATE.ZOOM) {
+			var movementY = event.movementY / 4;
 			var atPos = 0;
 			var position = _this.camera.position;
 
-			while(Math.abs(atPos) < Math.abs(event.movementY)) {
+			while(Math.abs(atPos) < Math.abs(movementY)) {
 				var rayAt = new THREE.Ray(position, new THREE.Vector3(0, 0, 1).applyEuler(_this.camera.rotation).normalize(), 0, 100).at(atPos);
 				
 				if(new THREE.Vector3().copy(rayAt).clamp(new THREE.Vector3(-12, -12, 2), new THREE.Vector3(12, 12, 9)).equals(rayAt)) {
 					_this.camera.position = rayAt;
-					atPos += (event.movementY / Math.abs(event.movementY)) / 5;
+					atPos += (movementY / Math.abs(movementY)) / 10;
 				} else {
-					atPos = Math.abs(event.movementY);
+					atPos = Math.abs(movementY);
 				}
 			}
 		}
@@ -55,14 +56,14 @@ THREE.MapControls = function(camera, domElement) {
 	this.domElement.addEventListener('mousewheel', function(event) {
 		_this.state = STATE.ZOOM;
 		_this.mousemove({
-			movementY: -event.wheelDeltaY / Math.abs(event.wheelDeltaY)
+			movementY: -event.wheelDeltaY / Math.abs(event.wheelDeltaY) * 4
 		});
 		_this.state = STATE.NONE;
 	});
 	this.domElement.addEventListener('DOMMouseScroll', function(event) {
 		_this.state = STATE.ZOOM;
 		_this.mousemove({
-			movementY: event.detail / Math.abs(event.detail)
+			movementY: event.detail / Math.abs(event.detail) * 4
 		});
 		_this.state = STATE.NONE;
 	});

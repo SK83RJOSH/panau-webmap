@@ -4,44 +4,100 @@
 	<meta charset="UTF-8">
 	<title>Panau Overview Map</title>
 	<script src="three.min.js"></script>
+	<script src="Stats.js"></script>
 	<script src="MapControls.js"></script>
 	<script>
-		var scene, camera, renderer, controls;
-		var map;
+		var scene, renderer, camera, controls;
+		var material, map, lods;
+		var stats = new Stats();
+		stats.setMode(0); // 0: fps, 1: ms
+
+		// Align top-left
+		stats.domElement.style.position = 'absolute';
+		stats.domElement.style.left = '0px';
+		stats.domElement.style.top = '0px';
 
 		function init() {
 			scene = new THREE.Scene();
 			scene.fog = new THREE.FogExp2(0xefd1b5, 0.035);
+
+			renderer = new THREE.WebGLRenderer({
+				antialias: true,
+				precision: 'highp'
+			});
+			renderer.setClearColor(0x052530);
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.physicallyBasedShading = true;
 
 			camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1028);
 			camera.position.y = -8;
 			camera.position.z = 9;
 			camera.lookAt(new THREE.Vector3());
 
-			var uniforms = THREE.UniformsUtils.clone(THREE.ShaderLib['normalmap'].uniforms);
-			uniforms["enableDiffuse"].value = true;
-			uniforms["tDiffuse"].value = THREE.ImageUtils.loadTexture('map_diffuse_low.jpg', THREE.UVMapping, function() {
-				THREE.ImageUtils.loadTexture('map_diffuse.jpg', THREE.UVMapping, function(texture) {					
-					map.material.uniforms["tDiffuse"].value = texture;
-					map.material.uniforms["tDiffuse"].value.minFilter = THREE.LinearFilter;
-					map.material.uniforms["tDiffuse"].value.magFilter = THREE.LinearFilter;
-				});
-			});
-			uniforms["tDiffuse"].value.minFilter = THREE.LinearFilter;
-			uniforms["tDiffuse"].value.magFilter = THREE.LinearFilter;
-			uniforms["enableDisplacement"].value = true;
-			uniforms["tDisplacement"].value = THREE.ImageUtils.loadTexture('map_displacement.jpg');
-			uniforms["uDisplacementScale"].value = 1;
+			lods = [];
+			var lodGeometry = [];
 
-			map = new THREE.Mesh(new THREE.PlaneGeometry(16, 16, 128, 128), new THREE.ShaderMaterial({
-				fragmentShader: THREE.ShaderLib['normalmap'].fragmentShader,
-				vertexShader: THREE.ShaderLib['normalmap'].vertexShader,
-				uniforms: uniforms,
-				fog: true,
-				lights: true
-			}));
-			map.geometry.computeTangents();
-			scene.add(map);
+			for(x = 0; x < 16; x++) {
+				for(y = 0; y < 16; y++) {
+					var lod = new THREE.LOD();
+					lod.position = new THREE.Vector3(x - 8, y - 8, 0);
+
+					var uniforms = THREE.UniformsUtils.clone(THREE.ShaderLib['normalmap'].uniforms);
+					uniforms["enableDiffuse"].value = true;
+					uniforms["tDiffuse"].value = THREE.ImageUtils.loadTexture('tiles/diffuse/' + y + '_' + x + '.jpeg');
+					uniforms["tDiffuse"].value.anistropy = renderer.getMaxAnisotropy();
+					uniforms["tDiffuse"].value.minFilter = THREE.LinearFilter;
+					uniforms["tDiffuse"].value.magFilter = THREE.LinearFilter;
+					uniforms["enableDisplacement"].value = true;
+					uniforms["tDisplacement"].value = THREE.ImageUtils.loadTexture('tiles/displacement/' + y + '_' + x + '.jpeg');
+					uniforms["uDisplacementScale"].value = 1;
+
+					var material = new THREE.ShaderMaterial({
+						fragmentShader: THREE.ShaderLib['normalmap'].fragmentShader,
+						vertexShader: THREE.ShaderLib['normalmap'].vertexShader,
+						uniforms: uniforms,
+						fog: true,
+						lights: true,
+						// wireframe: true
+					});
+
+					for(var level = 1; level <= 4; level++) {
+						var pow = Math.pow(2, level);
+						var geometry = lodGeometry[level];
+
+						if(!geometry) {
+							var subdivides;
+
+							switch(level) {
+								case 1:
+									subdivides = 32;
+									break;
+								case 2:
+									subdivides = 16;
+									break;
+								case 3:
+									subdivides = 8;
+									break;
+								case 4:
+									subdivides = 4;
+									break;
+								default: 
+									subdivides = 1;
+									break;
+							}
+
+							lodGeometry[level] = new THREE.PlaneGeometry(1, 1, subdivides, subdivides);
+							lodGeometry[level].computeTangents();
+							geometry = lodGeometry[level];
+						}
+						
+						lod.addLevel(new THREE.Mesh(geometry, material), ((level / 4) * 9));
+					}
+
+					scene.add(lod);
+					lods.push(lod);
+				}
+			}
 
 			scene.add(new THREE.AmbientLight());
 
@@ -52,29 +108,27 @@
 			}));
 			scene.add(ground);
 
-			renderer = new THREE.WebGLRenderer({
-				antialias: true,
-				precision: 'highp'
-			});
-			renderer.setClearColor(0x052530);
-			renderer.setSize(window.innerWidth, window.innerHeight);
-			renderer.physicallyBasedShading = true;
-
 			controls = new THREE.MapControls(camera, renderer.domElement);
 
-			for(var i = 0; i < 1000; i++) {
-				new Player(scene, worldToMap(((Math.random() * 2048) - 1024) * 16, Math.random() * 4096, ((Math.random() * 2048) - 1024) * 16), '', new THREE.Color(Math.random() * 255, Math.random() * 255, Math.random() * 255).getHex());
-			}
+			// for(var i = 0; i < 1000; i++) {
+			// 	new Player(scene, worldToMap(((Math.random() * 2048) - 1024) * 16, Math.random() * 4096, ((Math.random() * 2048) - 1024) * 16), '', new THREE.Color(Math.random() * 255, Math.random() * 255, Math.random() * 255).getHex());
+			// }
 			
 			// new Player(scene, worldToMap(0, 0, 600), '', 0xffffff); //Center test
 			// new Player(scene, worldToMap(19684.2 - 16384, 1301.58, 12563.86 - 16384), '', 0xff0000); //Accuracy test
 
 			document.body.appendChild(renderer.domElement);
+			document.body.appendChild(stats.domElement);
 		}
 
 		function animate() {
-			requestAnimationFrame(animate);
-			renderer.render(scene, camera);
+			stats.begin();
+				requestAnimationFrame(animate);
+				lods.forEach(function(lod) {
+					lod.update(camera);
+				});
+				renderer.render(scene, camera);
+			stats.end();
 		}
 
 		window.addEventListener('resize', function() {
